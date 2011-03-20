@@ -15,36 +15,49 @@ import org.bukkit.entity.*;
 
 public class ColorSignPlayerListener extends PlayerListener  {
 	
+	private static final Logger log = Logger.getLogger("Minecraft");
+	
 
 	@Override
 	public void onItemHeldChange(PlayerItemHeldEvent event) {
 
 		
-		Logger log = Logger.getLogger("Minecraft");
+		
 		Player p = event.getPlayer();
 		Block target = p.getTargetBlock(null, 5);
 		
 		BlockState state = target.getState();
 		
 		// Check if the current state is a Sign and 
-		// If the sign it is not null (otherwise casuses nullpointer if the sign is removed and player scrolls while looking at the block)
+		// If the sign it is not null (otherwise causes nullpointer if the sign is removed and player scrolls while looking at the block)
 		if (state instanceof Sign && state != null) {
 			
 			Sign sign = (Sign) state;
 			String[] lines = sign.getLines();
 			
+			// Find the first non-empty line which could have a color
+			String line = "";
+			boolean found = false;
+			for(int i = 0; i < lines.length && !found; i++){
+				if(lines[i].length() > 0 && lines[i].length() < 14) {
+					line = lines[i];
+					found = true;
+				}
+			}
+				
+			
 			// Init new color to black in case there is no color yet
 			ChatColor color = ChatColor.BLACK;
 			
-			// Match the first line of the sign on minecraft character for colour: \u00A7 + [0-f]
+			// Match the line of the sign on minecraft character for colour: \u00A7 + [0-f]
 			Pattern minecraftColor = Pattern.compile("\u00A7[0-9a-fA-F]");
-			Matcher m = minecraftColor.matcher(lines[0]);			
+			Matcher m = minecraftColor.matcher(line);			
 			
-			// Find all color codes in the first line
+			// Find all color codes in the line
 			while (m.find()) {
 				
-				// Get the color index from the first line of the sign
-				String match = Character.toString(lines[0].charAt(m.end()-1));
+				// Get the color index from the line of the sign
+				String match = Character.toString(line.charAt(m.end()-1));
 				int res = Integer.parseInt(match,16);
 								
 				int newSlot = event.getNewSlot();
@@ -83,8 +96,11 @@ public class ColorSignPlayerListener extends PlayerListener  {
 		int i = 0;
 		
 		for (String l : lines) {
-			l = color + ChatColor.stripColor(l);
-			sign.setLine(i, l);
+			l = ChatColor.stripColor(l);
+			// Don't color a line if it will overwrite the max length (15)
+			if(l.length() < 14 && l.length() > 0) {
+				sign.setLine(i, ""+ color + l);
+			}
 			i++;
 		}
 		
